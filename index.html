@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>3D Network Visualization</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Index Page</title>
   <style>
-    /* Basic page styling */
     body {
       font-family: Arial, sans-serif;
       background: #f7f7f7;
@@ -16,9 +15,21 @@
     h1 {
       color: #333;
     }
-    a {
+    /* Container for the 3D force graph visualization */
+    #network-container {
+      width: 400px;
+      height: 300px;
+      margin: 20px auto;
+      border: 1px solid #ddd;
+      background: #f7f7f7;
+    }
+    /* Container for the two links */
+    .links {
+      margin-top: 20px;
+    }
+    .links a {
       display: inline-block;
-      margin: 20px;
+      margin: 0 10px;
       padding: 10px 20px;
       font-size: 18px;
       text-decoration: none;
@@ -27,218 +38,86 @@
       border-radius: 5px;
       transition: background-color 0.3s;
     }
-    a:hover {
+    .links a:hover {
       background-color: #155d8b;
     }
-    /* Container for the 3D graph */
-    #graph-container {
-      width: 800px;
-      height: 600px;
-      margin: 0 auto 20px;
-      border: 1px solid #ccc;
-      background: #fff;
-    }
   </style>
-  <!-- Include Three.js and OrbitControls from a CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-  <h1>Welcome to the Ego-Centric Network Editor</h1>
+  <h1>Welcome to the Intro to Social Network Analysis Workshop</h1>
   
-  <!-- 3D Visualization container -->
-  <div id="graph-container"></div>
+  <!-- 3D network visualization container -->
+  <div id="network-container"></div>
   
-  <!-- Link to open the editor.html file -->
-  <a href="editor.html">Open Editor</a>
+  <!-- Links placed below the graph -->
+  <div class="links">
+    <a href="editor.html">Open Editor</a>
+    <a href="https://drive.google.com/uc?export=download&id=YOUR_FILE_ID" target="_blank">Download File</a>
+  </div>
   
-  <!-- Link directing to a Google Drive download (update YOUR_FILE_ID) -->
-  <a href="https://drive.google.com/uc?export=download&id=YOUR_FILE_ID" target="_blank">Download File</a>
-  
+  <!-- 3D Force Graph library -->
+  <script src="https://unpkg.com/3d-force-graph"></script>
   <script>
-    /*******************
-     * Global Variables
-     *******************/
-    let scene, camera, renderer, controls;
-    
-    /*****************************************************
-     * CSV Data (Adjacency matrix for 31 nodes)
-     * The CSV has a header row and each row’s first cell is a label.
-     * We will remove the header row and the first column so that the
-     * remaining 31×31 matrix contains "TRUE" or "FALSE" entries.
-     *****************************************************/
-    const csvData = `"","1","2","3","4","5","6","7","9","10","11","12","13","14","15","16","17","18","20","21","22","23","24","25","27","28","29","32","33","34","36","37"
-"1",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE
-"2",FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE
-"3",FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"4",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"5",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE
-"6",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"7",FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"9",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"10",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"11",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
-"12",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"13",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"14",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE
-"15",FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"16",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"17",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"18",FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"20",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"21",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"22",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"23",FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"24",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"25",FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"27",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE
-"28",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"29",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"32",TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE
-"33",FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"34",FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"36",TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
-"37",FALSE,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE`;
-    
-    /*********************
-     * Utility Functions
-     *********************/
-    
-    // Remove surrounding quotes from a cell (if present) and trim whitespace.
-    function cleanCell(cell) {
-      return cell.replace(/^"|"$/g, '').trim();
-    }
-    
-    // Parse CSV text into a 2D array.
-    function parseCSV(text) {
-      const lines = text.trim().split('\n');
-      return lines.map(line =>
-        line.split(',').map(cell => cleanCell(cell))
-      );
-    }
-    
-    // Generate points on a sphere using the Fibonacci sphere algorithm.
-    function generateSpherePoints(numPoints, sphereRadius) {
-      const points = [];
-      const offset = 2 / numPoints;
-      const increment = Math.PI * (3 - Math.sqrt(5));
-      for (let i = 0; i < numPoints; i++) {
-        const y = ((i * offset) - 1) + (offset / 2);
-        const r = Math.sqrt(1 - y * y);
-        const phi = i * increment;
-        const x = Math.cos(phi) * r;
-        const z = Math.sin(phi) * r;
-        points.push(new THREE.Vector3(x * sphereRadius, y * sphereRadius, z * sphereRadius));
-      }
-      return points;
-    }
-    
-    /*********************
-     * Three.js Setup
-     *********************/
-    
-    function init() {
-      const container = document.getElementById('graph-container');
-      
-      // Create scene
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f0f0);
-      
-      // Set up camera
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-      camera.position.set(0, 0, 500);
-      
-      // Set up renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(width, height);
-      container.appendChild(renderer.domElement);
-      
-      // Set up OrbitControls (auto-rotation enabled)
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 1.0;
-      
-      // When the user clicks the canvas, disable auto-rotate.
-      renderer.domElement.addEventListener('pointerdown', () => {
-        controls.autoRotate = false;
+    // Create random network data
+    const numNodes = 30;
+    const nodes = [];
+    for (let i = 0; i < numNodes; i++) {
+      nodes.push({
+        id: i.toString(),
+        name: 'Actor ' + i
       });
-      
-      // Adjust canvas size on window resize.
-      window.addEventListener('resize', onWindowResize, false);
     }
     
-    function onWindowResize() {
-      const container = document.getElementById('graph-container');
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    }
-    
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-    
-    /*********************
-     * Create the Graph
-     *********************/
-    
-    // Create nodes and edges based on the adjacency matrix.
-    function createGraph(matrix) {
-      const n = matrix.length;
-      if (n === 0) return;
-      
-      // Generate positions for each node on a sphere.
-      const sphereRadius = 200;
-      const points = generateSpherePoints(n, sphereRadius);
-      
-      // Create a red sphere for each node.
-      const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      const nodeGeometry = new THREE.SphereGeometry(5, 16, 16);
-      for (let i = 0; i < n; i++) {
-        const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
-        node.position.copy(points[i]);
-        scene.add(node);
-      }
-      
-      // Create blue lines (edges) between nodes where the matrix cell is "TRUE".
-      const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
-      for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-          // Check if the cell is "true" (case-insensitive).
-          if (matrix[i][j].toLowerCase() === 'true') {
-            const geometry = new THREE.BufferGeometry().setFromPoints([points[i], points[j]]);
-            const line = new THREE.Line(geometry, edgeMaterial);
-            scene.add(line);
-          }
+    const links = [];
+    // For every unique pair, add a link with 10% probability.
+    for (let i = 0; i < numNodes; i++) {
+      for (let j = i + 1; j < numNodes; j++) {
+        if (Math.random() < 0.1) {
+          links.push({
+            source: i.toString(),
+            target: j.toString()
+          });
         }
       }
     }
     
-    /*********************
-     * Main Execution
-     *********************/
+    const graphData = { nodes, links };
     
-    // Initialize Three.js.
-    init();
+    // Initialize the 3D Force Graph inside the container with fixed dimensions.
+    const Graph = ForceGraph3D()(document.getElementById('network-container'))
+      .graphData(graphData)
+      .nodeAutoColorBy('id')
+      .nodeLabel(node => node.name)
+      .linkWidth(1)
+      .linkColor(() => '#999999')
+      .width(400)
+      .height(300);
+      
+    // --- Auto-Rotation ---
+    let autoRotate = true;
+    const distance = 400;
+    let angle = 0;
     
-    // Parse the embedded CSV.
-    const parsedData = parseCSV(csvData);
-    // Remove the header row and then remove the first column from each row.
-    const dataMatrix = parsedData.slice(1).map(row => row.slice(1));
+    (function animate() {
+      if (autoRotate) {
+        angle += 0.002;
+        Graph.cameraPosition(
+          {
+            x: distance * Math.sin(angle),
+            y: distance * Math.cos(angle),
+            z: distance * 0.2
+          },
+          { x: 0, y: 0, z: 0 }, // always look at the center
+          0 // instant transition
+        );
+      }
+      requestAnimationFrame(animate);
+    })();
     
-    // Create the graph based on the processed matrix.
-    createGraph(dataMatrix);
-    
-    // Start animation loop.
-    animate();
+    // Stop auto-rotation when the user interacts with the canvas.
+    Graph.renderer().domElement.addEventListener('mousedown', () => {
+      autoRotate = false;
+    });
   </script>
 </body>
 </html>
